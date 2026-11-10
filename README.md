@@ -1,306 +1,118 @@
-Harika! 🎯 İşte doğrudan GitHub editörüne yapıştırabileceğin **tam ve hazır README.md** içeriği:
+# Free LLM API on Cloudflare Workers
 
----
+A tiny text-generation API that runs on Cloudflare Workers AI. You deploy it once, set one secret, and you get a URL you can call from anywhere — curl, Python, a frontend, whatever. The free tier of Workers AI gives you 10,000 neurons per day, which is roughly a few hundred calls depending on the model, so for a personal project or a prototype it costs nothing.
 
-```markdown
-# 🚀 Free LLM API with Cloudflare Workers
+It supports whatever text-generation models are available on Workers AI, and the default is Llama 4 Scout. You can also pass `model` per request to switch — e.g. Llama 3.3 70B for heavier reasoning, Qwen 3 for multilingual work, or GLM 4.7 Flash when you want fast responses.
 
-[![GitHub stars](https://img.shields.io/github/stars/MElamins/free-llm-api-cloudflare)](https://github.com/MElamins/free-llm-api-cloudflare/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/MElamins/free-llm-api-cloudflare)](https://github.com/MElamins/free-llm-api-cloudflare/network)
-[![GitHub license](https://img.shields.io/github/license/MElamins/free-llm-api-cloudflare)](https://github.com/MElamins/free-llm-api-cloudflare/blob/main/LICENSE)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare)](https://workers.cloudflare.com/)
+## What's in the repo
 
----
+```
+worker.js            the whole API (~70 lines, no dependencies)
+wrangler.toml        Cloudflare config, including the AI binding
+package.json         just so `npm run dev` / `npm run deploy` work
+.dev.vars.example    template for your local API key
+```
 
-**Deploy your own FREE AI text generation API in 5 minutes!** ⚡
+## Setup
 
-This project provides a **production-ready API** for text generation using Cloudflare Workers AI. It supports **Meta Llama, Qwen, GLM**, and more - all with **10,000 free daily requests**. Perfect for chatbots, content creation, code assistants, and AI applications.
+1. Create a free [Cloudflare account](https://dash.cloudflare.com/sign-up) if you don't have one.
+2. Clone this repo and install wrangler:
 
----
+```bash
+npm install
+```
 
-## ✨ Features
+3. Log in:
 
-| Feature | Benefit |
-|---------|---------|
-| 🆓 **Zero Cost** | Free tier with 10,000 neurons/day |
-| ⚡ **Global CDN** | Lightning-fast responses worldwide |
-| 🔐 **Secure** | API key authentication built-in |
-| 🧠 **Latest Models** | Llama 4, Llama 3.3 70B, Qwen, GLM |
-| 🛠️ **Ready to Use** | No ML expertise required |
-| 🌐 **CORS Enabled** | Use from any frontend |
-| 📦 **Lightweight** | Simple and maintainable code |
+```bash
+npx wrangler login
+```
 
----
+4. Set your API key as a secret (don't commit it, don't use a plain text variable):
 
-## 🎯 Use Cases
+```bash
+npx wrangler secret put API_KEY
+```
 
-- 🤖 **Chatbots & Virtual Assistants**
-- 📝 **Content Generation** (articles, blogs, social media)
-- 💻 **Code Assistant** (debugging, explanations, code generation)
-- 📚 **Educational Tools** (tutoring, Q&A)
-- 🌍 **Multilingual Applications**
-- 🔍 **Search & Analysis**
+5. Deploy:
 
----
+```bash
+npx wrangler deploy
+```
 
-## 🧠 Supported AI Models
+Wrangler will print your URL, something like `https://free-llm-api.<your-subdomain>.workers.dev`. That's it — the AI binding is already in `wrangler.toml`, so there's nothing to click through in the dashboard.
 
-| Model | Provider | Best For |
-|-------|----------|----------|
-| **Llama 4 Scout** | Meta | General purpose, coding, chat |
-| **Llama 3.3 70B** | Meta | Complex reasoning, analysis |
-| **Qwen 3 30B** | Alibaba | Multilingual, coding |
-| **GLM 4.7 Flash** | Zhipu AI | Fast responses, real-time chat |
+For local development, copy `.dev.vars.example` to `.dev.vars`, put a key in it, and run `npm run dev`.
 
----
+## Usage
 
-## 📊 Free Tier Details
+All requests are `POST /` with a JSON body and a `Bearer` auth header. Two body shapes are accepted:
 
-| Plan | Daily Neurons | Monthly | Cost |
-|------|--------------|---------|------|
-| **Free** | 10,000 | 300,000 | **$0** |
-| **Pro** | Usage-based | Custom | $0.011/1k neurons |
+- `{"prompt": "..."}` — a single prompt
+- `{"messages": [{"role": "user", "content": "..."}]}` — a chat-style conversation
 
-> 💡 **Tip:** 10,000 neurons/day = ~200-500 API calls depending on model size
+Optional fields: `model` (string), `max_tokens` (1–4096), `temperature` (0–1).
 
----
+### curl
 
-## 🚀 Quick Start
+```bash
+curl -X POST https://your-worker.workers.dev/ \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain DNS in two sentences."}'
+```
 
-### Prerequisites
-- [Cloudflare Account](https://dash.cloudflare.com/sign-up) (free)
-- 5 minutes of your time
+Response looks like:
 
-### Setup Steps
+```json
+{"model":"@cf/meta/llama-4-scout-17b-16e-instruct","response":"DNS is ..."}
+```
 
-#### 1. Create Cloudflare Account
-Sign up at [Cloudflare](https://dash.cloudflare.com/) for free.
+### Switching models
 
-#### 2. Create a Worker
-- Go to Cloudflare Dashboard > Workers & Pages
-- Click **"Create application"**
-- Select **"Create Worker"**
-- Name it (e.g., `free-llm-api`)
-- Click **"Deploy"**
+```bash
+curl -X POST https://your-worker.workers.dev/ \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Write a haiku about servers", "model": "@cf/zai-org/glm-4.7-flash"}'
+```
 
-#### 3. Add Worker Code
-- Replace the default code with the code from this repo
-- Click **"Save and Deploy"**
-
-#### 4. Add API Key
-- Go to **Settings** > **Variables**
-- Click **"Add variable"**
-  - Variable name: `API_KEY`
-  - Value: `your-secret-key`
-- Click **"Save and Deploy"**
-
-#### 5. Enable Workers AI
-- Go to **AI** section
-- Click **"Get started"**
-- Enable Workers AI (free tier)
-
-#### 6. Add AI Binding (CRITICAL)
-- In worker settings, go to **Variables**
-- Scroll to **"Service bindings"**
-- Click **"Add binding"**
-  - Variable: `AI`
-  - Service: **Workers AI**
-- Click **"Save and Deploy"**
-
-> ⚠️ **Warning:** Without AI binding, the worker won't work!
-
-#### 7. Get Your URL
-- Your worker URL: `https://free-llm-api.your-subdomain.workers.dev`
-- Save this for API access
-
----
-
-## 💻 API Usage Examples
+Model IDs come from the [Workers AI catalog](https://developers.cloudflare.com/workers-ai/models/). Note that bigger models burn through the daily free neurons much faster — Llama 3.3 70B uses noticeably more per call than the default.
 
 ### Python
+
 ```python
 import requests
 
-def generate_text(prompt):
-    response = requests.post(
-        "https://your-worker-name.workers.dev/",
-        headers={
-            "Authorization": "Bearer your-api-key",
-            "Content-Type": "application/json"
-        },
-        json={"prompt": prompt}
+def generate(prompt, model=None):
+    body = {"prompt": prompt}
+    if model:
+        body["model"] = model
+    r = requests.post(
+        "https://your-worker.workers.dev/",
+        headers={"Authorization": "Bearer your-api-key"},
+        json=body,
     )
-    return response.json()
+    r.raise_for_status()
+    return r.json()["response"]
 
-# Example
-result = generate_text("Explain quantum computing simply")
-print(result['response'])
+print(generate("Give me three names for a coffee shop"))
 ```
 
-### cURL
-```bash
-curl -X POST https://your-worker-name.workers.dev/ \
-  -H "Authorization: Bearer your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What is the capital of Turkey?"}'
-```
+## Honest limitations
 
-### JavaScript
-```javascript
-const response = await fetch("https://your-worker-name.workers.dev/", {
-    method: "POST",
-    headers: {
-        "Authorization": "Bearer your-api-key",
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ prompt: "Write a poem about AI" })
-});
-const data = await response.json();
-console.log(data.response);
-```
+- **Rate limits / quota are Cloudflare's, not yours.** When you hit the free neuron cap, requests fail until the next day. There's no retry logic here — add it on the caller side if you need it.
+- **No streaming.** Responses come back as one JSON blob. Fine for short outputs, less fun for long ones.
+- **CORS is wide open** (`*`). That's intentional so frontends work out of the box, but it means anyone can craft browser requests — your API key is what protects you, so don't ship it in client-side code.
+- **If `API_KEY` isn't set, everything returns 401.** It fails closed on purpose; a keyless deployment shouldn't be publicly usable.
+- **Output shape varies slightly between models.** Most return `{"response": "..."}`; the worker normalizes the common case, but if you get an object back instead of a string, check the model's docs page.
 
----
+## Troubleshooting
 
-## 🔧 Customization
+- **401 Unauthorized** — the `Authorization` header must be exactly `Bearer <key>`, and the `API_KEY` secret must be set on the deployed worker (not just locally).
+- **Model errors** — check the ID against the [model catalog](https://developers.cloudflare.com/workers-ai/models/); IDs are versioned and occasionally change.
+- **Local dev doesn't find the key** — you need a `.dev.vars` file for `wrangler dev`; secrets set with `wrangler secret put` only exist in production.
 
-### Change AI Model
-```javascript
-// Replace this line in worker.js
-"@cf/meta/llama-4-scout-17b-16e-instruct"
+## License
 
-// With any model:
-// "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-// "@cf/qwen/qwen3-30b-a3b-fp8"
-// "@cf/zai-org/glm-4.7-flash"
-```
-
-### Adjust Parameters
-```javascript
-const result = await env.AI.run("model-id", {
-    prompt: prompt,
-    max_tokens: 1000,      // Response length (1-2048)
-    temperature: 0.8,      // Creativity (0.0-1.0)
-    top_p: 0.9            // Nucleus sampling
-});
-```
-
----
-
-## 🔧 worker.js (Full Code)
-
-```javascript
-export default {
-    async fetch(request, env) {
-        const API_KEY = env.API_KEY;
-        const url = new URL(request.url);
-        const auth = request.headers.get("Authorization");
-
-        // 🔐 API key check
-        if (auth !== `Bearer ${API_KEY}`) {
-            return jsonResponse({ error: "Unauthorized" }, 401);
-        }
-
-        // 🚫 Only allow POST
-        if (request.method !== "POST" || url.pathname !== "/") {
-            return jsonResponse({ error: "Not allowed" }, 405);
-        }
-
-        try {
-            const { prompt } = await request.json();
-
-            if (!prompt || prompt.trim() === "") {
-                return jsonResponse({ error: "Prompt is required" }, 400);
-            }
-
-            // 🧠 Generate text
-            const result = await env.AI.run(
-                "@cf/meta/llama-4-scout-17b-16e-instruct",
-                {
-                    prompt: prompt,
-                    max_tokens: 500,
-                    temperature: 0.7
-                }
-            );
-
-            return jsonResponse({
-                success: true,
-                response: result,
-                prompt: prompt
-            }, 200);
-
-        } catch (err) {
-            return jsonResponse({
-                error: "Failed to generate response",
-                details: err.message
-            }, 500);
-        }
-    },
-};
-
-function jsonResponse(data, status = 200) {
-    return new Response(JSON.stringify(data, null, 2), {
-        status,
-        headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-        },
-    });
-}
-```
-
----
-
-## ❓ Common Issues
-
-**"Unauthorized" error**
-- Verify API_KEY is set correctly
-- Check `Bearer ` prefix in Authorization header
-
-**"Model not found" error**
-- Verify model ID is correct
-- Check [Cloudflare Models](https://developers.cloudflare.com/workers-ai/models/)
-- Ensure Workers AI is enabled
-
-**JSON parsing error**
-- Verify AI binding is properly configured
-- Restart the worker
-
-**Cold start delay**
-- First request may take 5-10 seconds
-- Subsequent requests are instant
-
----
-
-## 📦 Repository Structure
-
-```
-/
-├── README.md          # This file
-├── worker.js          # Cloudflare Worker code
-└── frontend_demo.html # Optional demo interface
-```
-
----
-
-## 📄 License
-
-MIT License - Free for personal and commercial use.
-
----
-
-## ⭐ Support the Project
-
-If this project helped you:
-- ⭐ Star it on GitHub
-- 🐦 Share it on Twitter/X
-- 📝 Write a blog post about it
-
----
-
-## 🏷️ Topics
-
-`api` `ai` `llm` `cloudflare` `text-generation` `free-api` `meta-llama` `qwen` `workers-ai` `chatbot` `code-assistant` `content-generation` `nlp` `machine-learning` `serverless`
-
----
-
-**Made with ❤️ by MElamins**
+MIT.
